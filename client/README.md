@@ -1,6 +1,10 @@
-# React + Tailwind App
+# CampusConnect - Client
 
-A simple React + TypeScript application with Tailwind CSS.
+React frontend application for CampusConnect job matching platform.
+
+## Overview
+
+This is the client-side application built with React, TypeScript, and Tailwind CSS. It provides a modern, responsive interface for job seekers and employers to connect.
 
 ## Quick Start
 
@@ -49,10 +53,60 @@ To build for production:
 npm run build
 ```
 
+## Project Structure
+
+```
+client/
+├── src/
+│   ├── components/         # Reusable UI components
+│   │   ├── JobCard.tsx
+│   │   ├── JobList.tsx
+│   │   ├── PostJobForm.tsx
+│   │   ├── Chat.tsx
+│   │   └── ...
+│   ├── pages/              # Page components
+│   │   ├── Landing.tsx     # Landing page
+│   │   ├── SignIn.tsx      # Sign in page
+│   │   ├── SignUp.tsx      # Sign up page
+│   │   ├── Dashboard.tsx   # Main dashboard
+│   │   ├── Profile.tsx     # User profile
+│   │   ├── Chat.tsx        # Chat interface
+│   │   └── ...
+│   ├── context/            # React context
+│   │   └── AuthContext.tsx # Authentication context
+│   ├── utils/              # Utility functions
+│   │   ├── matchScore.ts   # Job matching algorithm
+│   │   └── notifications.ts # Push notification utils
+│   └── lib/                # Library configs
+│       └── supabase.ts     # Supabase client
+└── supabase/               # Supabase Edge Functions
+```
+
+## Features
+
+### Pages
+
+- **Landing Page** - Beautiful landing page with features and stats
+- **Sign In/Sign Up** - Authentication with email/password and Google OAuth
+- **Dashboard** - Role-based dashboard (Seeker/Finder) with quick actions
+- **Profile** - User profile management with resume upload and AI parsing
+- **Job Listings** - Browse jobs with smart matching scores
+- **Applications** - Track job applications (Seeker) and manage applicants (Finder)
+- **Chat** - Real-time messaging between users
+- **Saved Jobs** - Bookmark favorite job listings
+
+### Components
+
+- **JobCard** - Displays job information with match score
+- **PostJobForm** - Create new job postings
+- **NotificationCenter** - Message notifications dropdown
+- **ApplyModal** - Application submission interface
+
 ## Tech Stack
 
-- React 19
-- TypeScript
-- Tailwind CSS
-- Create React App
-- Supabase (Auth, Database, Realtime)
+- **React 19** - UI library
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Utility-first CSS framework
+- **Create React App** - Build tooling
+- **Supabase** - Authentication, Database, Realtime, Storage
+- **React Router** - Client-side routing
