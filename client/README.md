@@ -13,7 +13,7 @@ npm install
 ```
 REACT_APP_SUPABASE_URL=your_supabase_project_url_here
 REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-REACT_APP_BACKEND_URL=http://localhost:4000
+REACT_APP_BACKEND_URL=https://s25-c-connect-3st9.vercel.app
 ```
 
 3. Set up Supabase database tables:

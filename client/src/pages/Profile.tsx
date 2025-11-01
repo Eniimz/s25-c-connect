@@ -165,7 +165,7 @@ export default function Profile() {
         .getPublicUrl(filePath)
 
       // 3. Call backend API to parse resume
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000'
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://s25-c-connect-3st9.vercel.app'
       const parseResponse = await fetch(`${backendUrl}/api/parse-resume`, {
         method: 'POST',
         headers: {
