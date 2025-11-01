@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import ApplyModal from './ApplyModal'
+import JobDetailsModal from './JobDetailsModal'
+import JobCard from './JobCard'
 import { calculateMatchScore } from '../utils/matchScore'
 
 interface Job {
@@ -24,16 +26,43 @@ interface Profile {
 
 export default function JobList() {
   const { user } = useAuth()
-  const [jobs, setJobs] = useState<JobWithScore[]>([])
+  const [allJobs, setAllJobs] = useState<JobWithScore[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedType, setSelectedType] = useState<string>('all')
+  const [selectedRequirements, setSelectedRequirements] = useState<string[]>([])
+  
+  // Debounce ref
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
   // Fetch jobs and profile
   useEffect(() => {
     fetchData()
   }, [user])
+
+  // Debounce search query
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+    }, 300)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchQuery])
 
   const fetchData = async () => {
     if (!user) return
@@ -69,7 +98,7 @@ export default function JobList() {
         matchScore: calculateMatchScore(job, profileData || { skills: [] })
       })).sort((a, b) => b.matchScore - a.matchScore)
 
-      setJobs(jobsWithScores)
+      setAllJobs(jobsWithScores)
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -77,10 +106,62 @@ export default function JobList() {
     }
   }
 
+  // Get all unique requirements from all jobs
+  const allRequirements = useMemo(() => {
+    const requirementsSet = new Set<string>()
+    allJobs.forEach(job => {
+      if (job.requirements && job.requirements.length > 0) {
+        job.requirements.forEach(req => requirementsSet.add(req))
+      }
+    })
+    return Array.from(requirementsSet).sort()
+  }, [allJobs])
+
+  // Filter jobs
+  const filteredJobs = useMemo(() => {
+    return allJobs.filter(job => {
+      // Search by title
+      if (debouncedSearch && !job.title.toLowerCase().includes(debouncedSearch.toLowerCase())) {
+        return false
+      }
+
+      // Filter by type
+      if (selectedType !== 'all' && job.type !== selectedType) {
+        return false
+      }
+
+      // Filter by requirements
+      if (selectedRequirements.length > 0) {
+        const jobRequirements = job.requirements || []
+        const hasAllSelected = selectedRequirements.every(req => jobRequirements.includes(req))
+        if (!hasAllSelected) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [allJobs, debouncedSearch, selectedType, selectedRequirements])
+
+  // Toggle requirement filter
+  const toggleRequirement = (req: string) => {
+    if (selectedRequirements.includes(req)) {
+      setSelectedRequirements(selectedRequirements.filter(r => r !== req))
+    } else {
+      setSelectedRequirements([...selectedRequirements, req])
+    }
+  }
+
   // Handle apply click
   const handleApply = (job: Job) => {
     setSelectedJob(job)
     setIsModalOpen(true)
+  }
+
+  // Handle view details click
+  const handleViewDetails = (job: JobWithScore) => {
+    setSelectedJob(job)
+    setIsDetailsModalOpen(true)
   }
 
   // Format type for display
@@ -99,10 +180,94 @@ export default function JobList() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Available Opportunities</h2>
         <p className="text-gray-600">Browse and apply to jobs posted by finders</p>
       </div>
+
+      {/* Search and Filters */}
+      {!loading && allJobs.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6 space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              placeholder="Search by job title..."
+            />
+          </div>
+
+          {/* Filters */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Type Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Job Type
+              </label>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white"
+              >
+                <option value="all">All Types</option>
+                <option value="academic">Academic</option>
+                <option value="startup">Startup</option>
+                <option value="part-time">Part-Time</option>
+                <option value="competition">Competition</option>
+              </select>
+            </div>
+
+            {/* Clear Filters */}
+            <div className="flex items-end">
+              {(searchQuery || selectedType !== 'all' || selectedRequirements.length > 0) && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('')
+                    setSelectedType('all')
+                    setSelectedRequirements([])
+                  }}
+                  className="px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Clear All Filters
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Requirement Filters */}
+          {allRequirements.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Requirements
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {allRequirements.map((req) => (
+                  <button
+                    key={req}
+                    type="button"
+                    onClick={() => toggleRequirement(req)}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      selectedRequirements.includes(req)
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {req}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -116,74 +281,47 @@ export default function JobList() {
       )}
 
       {/* No Jobs */}
-      {!loading && jobs.length === 0 && (
+      {!loading && allJobs.length === 0 && (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <p className="text-gray-600 text-lg">No jobs available at the moment</p>
           <p className="text-gray-500 mt-2">Check back later for new opportunities!</p>
         </div>
       )}
 
+      {/* No Results */}
+      {!loading && allJobs.length > 0 && filteredJobs.length === 0 && (
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <p className="text-gray-600 text-lg">No jobs found</p>
+          <p className="text-gray-500 mt-2">Try adjusting your filters or search query</p>
+        </div>
+      )}
+
       {/* Jobs List */}
-      {!loading && jobs.length > 0 && (
+      {!loading && filteredJobs.length > 0 && (
         <div className="grid gap-6">
-          {jobs.map((job, index) => (
-            <div 
-              key={job.id} 
-              className={`bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow ${
-                index === 0 && job.matchScore > 70 ? 'ring-2 ring-green-500' : ''
-              }`}
-            >
-              {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <div className="flex items-start gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-gray-900">{job.title}</h3>
-                    {index === 0 && job.matchScore > 70 && (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
-                        ⭐ Top Match
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="inline-block px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
-                      {formatType(job.type)}
-                    </span>
-                    <span className={`inline-block px-3 py-1 border rounded-full text-sm font-semibold ${getMatchBadgeColor(job.matchScore)}`}>
-                      Match: {job.matchScore}%
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleApply(job)}
-                  className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Apply
-                </button>
-              </div>
-
-              {/* Description */}
-              <p className="text-gray-700 mb-4 whitespace-pre-wrap">{job.description}</p>
-
-              {/* Requirements */}
-              {job.requirements && job.requirements.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Requirements:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {job.requirements.map((req, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
-                      >
-                        {req}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+          {filteredJobs.map((job, index) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              index={index}
+              onApply={handleApply}
+              onViewDetails={handleViewDetails}
+              formatType={formatType}
+              getMatchBadgeColor={getMatchBadgeColor}
+            />
           ))}
         </div>
       )}
+
+      {/* Job Details Modal */}
+      <JobDetailsModal
+        job={selectedJob as JobWithScore | null}
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        onApply={handleApply}
+        formatType={formatType}
+        getMatchBadgeColor={getMatchBadgeColor}
+      />
 
       {/* Apply Modal */}
       <ApplyModal

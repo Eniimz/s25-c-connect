@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import PostJobForm from '../components/PostJobForm'
+import MyJobsList from '../components/MyJobsList'
 import JobList from '../components/JobList'
 
 export default function Dashboard() {
@@ -70,9 +71,31 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {role === 'finder' ? (
-          <PostJobForm />
+          <div className="space-y-6">
+            <PostJobForm />
+            <MyJobsList />
+          </div>
         ) : (
-          <JobList />
+          <div className="space-y-6">
+            {/* Tabs */}
+            <div className="flex gap-4 border-b border-gray-200">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="px-4 py-2 border-b-2 border-indigo-600 text-indigo-600 font-medium"
+              >
+                Browse Jobs
+              </button>
+              <button
+                onClick={() => navigate('/saved')}
+                className="px-4 py-2 border-b-2 border-transparent text-gray-600 font-medium hover:text-indigo-600 transition-colors"
+              >
+                Saved Jobs ❤️
+              </button>
+            </div>
+
+            {/* Job List */}
+            <JobList />
+          </div>
         )}
       </main>
     </div>
