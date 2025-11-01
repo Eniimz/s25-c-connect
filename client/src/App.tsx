@@ -4,6 +4,9 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import SavedJobs from './pages/SavedJobs'
+import Applications from './pages/Applications'
+import MyApplications from './pages/MyApplications'
+import Chat from './pages/Chat'
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -112,6 +115,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <SavedJobs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/applications"
+            element={
+              <ProtectedRoute>
+                <Applications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-applications"
+            element={
+              <ProtectedRoute>
+                <MyApplications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat/:jobId"
+            element={
+              <ProtectedRoute>
+                <Chat />
               </ProtectedRoute>
             }
           />

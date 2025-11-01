@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
@@ -30,8 +31,10 @@ export default function JobDetailsModal({
   formatType,
   getMatchBadgeColor,
 }: JobDetailsModalProps) {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [isBookmarked, setIsBookmarked] = useState(false)
+  const [hasApplied, setHasApplied] = useState(false)
   const [loading, setLoading] = useState(false)
   const hasTrackedView = useRef(false)
 
@@ -43,8 +46,9 @@ export default function JobDetailsModal({
         incrementView()
       }
       checkBookmarkStatus()
+      checkApplicationStatus()
     }
-  }, [isOpen, job])
+  }, [isOpen, job, user])
 
   const incrementView = async () => {
     if (!user || !job) return
@@ -89,6 +93,27 @@ export default function JobDetailsModal({
       setIsBookmarked(!!data)
     } catch (error) {
       console.error('Error checking bookmark:', error)
+    }
+  }
+
+  const checkApplicationStatus = async () => {
+    if (!user || !job) return
+
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .eq('job_id', job.id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking application:', error)
+      }
+
+      setHasApplied(!!data)
+    } catch (error) {
+      console.error('Error checking application:', error)
     }
   }
 
@@ -207,17 +232,32 @@ export default function JobDetailsModal({
             </div>
           )}
 
-          {/* Apply Button */}
-          <div className="pt-4 border-t border-gray-200">
-            <button
-              onClick={() => {
-                onClose()
-                onApply(job)
-              }}
-              className="w-full px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Apply Now
-            </button>
+          {/* Actions */}
+          <div className="pt-4 border-t border-gray-200 space-y-2">
+            {hasApplied && job.posted_by !== user?.id ? (
+              <button
+                onClick={() => {
+                  onClose()
+                  navigate(`/chat/${job.id}`)
+                }}
+                className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Chat with Finder
+              </button>
+            ) : !hasApplied ? (
+              <button
+                onClick={() => {
+                  onClose()
+                  onApply(job)
+                }}
+                className="w-full px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Apply Now
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
