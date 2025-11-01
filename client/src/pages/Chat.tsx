@@ -139,6 +139,7 @@ export default function Chat() {
         (payload) => {
           console.log('Real-time message received:', payload)
           const newMessage = payload.new as Message
+          
           // Prevent duplicates - only add if message doesn't already exist
           setMessages((prev) => {
             if (prev.some(msg => msg.id === newMessage.id)) {

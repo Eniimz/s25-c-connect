@@ -1,14 +1,73 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 import PostJobForm from '../components/PostJobForm'
 import MyJobsList from '../components/MyJobsList'
 import JobList from '../components/JobList'
+import NotificationCenter from '../components/NotificationCenter'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user, role, setRole, logout } = useAuth()
   const [switching, setSwitching] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // Fetch notification preference and unread count
+  useEffect(() => {
+    if (user) {
+      fetchNotificationPreference()
+      fetchUnreadCount()
+    }
+  }, [user])
+
+  const fetchNotificationPreference = async () => {
+    if (!user) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('notifications_enabled')
+        .eq('id', user.id)
+        .single()
+
+      if (!error && data) {
+        setNotificationsEnabled(data.notifications_enabled || false)
+      }
+    } catch (error) {
+      console.error('Error fetching notification preference:', error)
+    }
+  }
+
+  const fetchUnreadCount = async () => {
+    if (!user) return
+
+    try {
+      const normalizedUserId = user.id.replace(/-/g, '_')
+      
+      // Fetch messages for this user
+      const { data: allMessages } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (!allMessages) return
+
+      // Count unread messages from others
+      const unread = allMessages.filter(msg => {
+        const chatId = msg.chat_id
+        const isForUser = chatId.startsWith(normalizedUserId + '_') || chatId.includes('_' + normalizedUserId + '_')
+        return isForUser && msg.sender_id !== user.id && !msg.read
+      }).length
+
+      setUnreadCount(unread)
+    } catch (error) {
+      console.error('Error fetching unread count:', error)
+    }
+  }
 
   // Handle role switch
   const handleSwitchRole = async () => {
@@ -58,6 +117,23 @@ export default function Dashboard() {
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-indigo-700">{role === 'finder' ? 'Finder' : 'Seeker'} Mode</span>
               </div>
+              {notificationsEnabled && (
+                <button
+                  onClick={() => setNotificationCenterOpen(!notificationCenterOpen)}
+                  className="relative w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center cursor-pointer hover:bg-indigo-200 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  {unreadCount > 0 && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
+                      <span className="text-xs font-bold text-white">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => navigate('/profile')}
                 className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white font-semibold flex items-center justify-center hover:from-indigo-600 hover:to-purple-600 transition-all shadow-md hover:shadow-lg"
@@ -219,6 +295,18 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+
+      {/* Notification Center */}
+      <NotificationCenter
+        isOpen={notificationCenterOpen}
+        onClose={() => {
+          setNotificationCenterOpen(false)
+          // Refresh unread count when closing
+          if (user) {
+            fetchUnreadCount()
+          }
+        }}
+      />
     </div>
   )
 }

@@ -12,7 +12,7 @@ npm install
 2. Create a `.env` file in the root:
 ```
 OPENAI_API_KEY=sk-...
-PORT=3000
+PORT=4000
 ```
 
 3. Run the server:
@@ -25,7 +25,7 @@ For development with auto-reload:
 npm run dev
 ```
 
-The server will start at `http://localhost:3000`
+The server will start at `http://localhost:4000`
 
 ## API Endpoints
 
@@ -34,6 +34,19 @@ The server will start at `http://localhost:3000`
 GET /
 ```
 Returns server status.
+
+### Resume Parsing
+```
+POST /api/parse-resume
+```
+Body:
+```json
+{
+  "fileUrl": "https://example.com/resume.pdf",
+  "userId": "user-uuid"
+}
+```
+Returns extracted resume data including full name, skills, bio, and projects.
 
 ### OpenAI Chat
 ```

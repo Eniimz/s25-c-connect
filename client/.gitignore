@@ -23,3 +23,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 supabase_profiles_setup.sql
+
+# Supabase Edge Functions (Deno code, not Node/React)
+/supabase
