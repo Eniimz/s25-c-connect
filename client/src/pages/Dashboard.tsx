@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import PostJobForm from '../components/PostJobForm'
+import JobList from '../components/JobList'
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const { user, role, setRole, logout } = useAuth()
   const [switching, setSwitching] = useState(false)
 
@@ -19,6 +22,17 @@ export default function Dashboard() {
     }
   }
 
+  // Get user initials for avatar
+  const getInitials = () => {
+    if (!user?.email) return 'U'
+    const email = user.email
+    const parts = email.split('@')[0].split('.')
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return email.substring(0, 2).toUpperCase()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -28,6 +42,13 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">Hi, {user?.email}</span>
+              <button
+                onClick={() => navigate('/profile')}
+                className="w-10 h-10 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center hover:bg-indigo-700 transition-colors"
+                title="View Profile"
+              >
+                {getInitials()}
+              </button>
               <button
                 onClick={handleSwitchRole}
                 disabled={switching}
@@ -51,14 +72,7 @@ export default function Dashboard() {
         {role === 'finder' ? (
           <PostJobForm />
         ) : (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Browse Jobs
-            </h2>
-            <p className="text-gray-600">
-              Browse jobs soon...
-            </p>
-          </div>
+          <JobList />
         )}
       </main>
     </div>
